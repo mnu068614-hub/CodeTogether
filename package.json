@@ -1,0 +1,13 @@
+{
+  "name": "codetogether",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal runnable scaffold for CodeTogether.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
