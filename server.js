@@ -12,29 +12,55 @@ const mimeTypes = {
   '.json': 'application/json; charset=utf-8'
 };
 
-const server = http.createServer((req, res) => {
-  const requestedPath = req.url === '/' ? '/index.html' : req.url;
-  const filePath = path.join(root, requestedPath);
+function resolveRequestedPath(url = '/') {
+  const rawPath = (url.split('?')[0] || '').split('#')[0] || '/';
+  const pathname = decodeURIComponent(rawPath);
+  const requestedPath = pathname === '/' ? '/index.html' : pathname;
+  const absolutePath = path.resolve(root, `.${requestedPath}`);
+  const relativePath = path.relative(root, absolutePath);
+  const isInsideRoot = relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
 
-  if (!filePath.startsWith(root)) {
-    res.writeHead(403);
-    res.end('Forbidden');
-    return;
-  }
+  return { absolutePath, isInsideRoot };
+}
 
-  fs.readFile(filePath, (error, data) => {
-    if (error) {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Not found');
+function createServer() {
+  return http.createServer((req, res) => {
+    let resolved;
+    try {
+      resolved = resolveRequestedPath(req.url || '/');
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Bad request');
       return;
     }
 
-    const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' });
-    res.end(data);
-  });
-});
+    if (!resolved.isInsideRoot) {
+      res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Forbidden');
+      return;
+    }
 
-server.listen(port, () => {
-  console.log(`CodeTogether scaffold running at http://localhost:${port}`);
-});
+    fs.readFile(resolved.absolutePath, (error, data) => {
+      if (error) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Not found');
+        return;
+      }
+
+      const ext = path.extname(resolved.absolutePath);
+      res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' });
+      res.end(data);
+    });
+  });
+}
+
+if (require.main === module) {
+  createServer().listen(port, () => {
+    console.log(`CodeTogether scaffold running at http://localhost:${port}`);
+  });
+}
+
+module.exports = {
+  createServer,
+  resolveRequestedPath
+};
