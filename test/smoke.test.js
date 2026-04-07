@@ -18,3 +18,9 @@ test('resolveRequestedPath keeps requests within document root', () => {
   assert.equal(resolveRequestedPath('/../CodeTogether2/secret.txt').isInsideRoot, false);
   assert.equal(resolveRequestedPath('/../../etc/passwd').isInsideRoot, false);
 });
+
+
+test('resolveRequestedPath rejects NUL bytes in request paths', () => {
+  assert.throws(() => resolveRequestedPath('/%00'), URIError);
+  assert.throws(() => resolveRequestedPath('/safe\0name.txt'), URIError);
+});

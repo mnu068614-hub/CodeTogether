@@ -14,7 +14,15 @@ const mimeTypes = {
 
 function resolveRequestedPath(url = '/') {
   const rawPath = (url.split('?')[0] || '').split('#')[0] || '/';
+  if (rawPath.includes('\0') || /%00/i.test(rawPath)) {
+    throw new URIError('NUL bytes are not allowed in request paths');
+  }
+
   const pathname = decodeURIComponent(rawPath);
+  if (pathname.includes('\0')) {
+    throw new URIError('NUL bytes are not allowed in request paths');
+  }
+
   const requestedPath = pathname === '/' ? '/index.html' : pathname;
   const absolutePath = path.resolve(root, `.${requestedPath}`);
   const relativePath = path.relative(root, absolutePath);
